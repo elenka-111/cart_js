@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+	<head>
+		<title>Корзина заказов</title>
+		<meta charset='utf-8' />
+		<link rel="stylesheet" type="text/css" href="style.css">
+	</head>
+	<body>
+		<div class="app">
+			<div class="content">
+				<h1 class="content__title">Корзина</h1>
+				<div class="content__card cart" id ="card">
+				</div>
+				<div class="content__total">
+					<h3>Итого</h3>
+					<div class="change-total">
+						<h4 id="totalSum"></h4>
+						<select class="change-total__select" id="valute" onchange="changeValute(this);"></select>
+					</div>
+				</div>
+			</div>
+		</div>
+		<script type="text/javascript" src="./calculator.js"></script>
+	</body>
+</html>
