@@ -33,13 +33,17 @@ const currency = {
 	active: "USD",
 };
 
+let rateValute = {};
+let arrayTotal = {};
 
-drawCart("card",selectedCart);
-drawValute("valute", currency);
-getTotalCartPrice(selectedCart, currency, rateUrl).then(
+
+drawCart(selectedCart);
+drawValute(currency);
+getTotalCartPrice(selectedCart, currency).then(
 	result => {
 		console.log(result);
-		drawTotalPrice("totalSum", result, currency);
+		arrayTotal = result;
+		drawTotalPrice(arrayTotal, currency);
 	} 
 ).catch(
 	error => console.log("Получена ошибка ", error)
@@ -49,9 +53,13 @@ getTotalCartPrice(selectedCart, currency, rateUrl).then(
 
 async function changeValute(e){
 	currency.active = e.options[e.selectedIndex].value;
-	let res = await getTotalCartPrice(selectedCart, currency, rateUrl);
-	drawTotalPrice("totalSum", res, currency);
-	console.log(res);
+	//let res = await getTotalCartPrice(selectedCart, currency);
+	if (Object.keys(arrayTotal).length) {
+			drawTotalPrice(arrayTotal, currency);
+	} else {
+		alert("Возникла ошибка..");
+	}
+
 
 }
 
@@ -60,13 +68,18 @@ async function deleteOne(e){
 		return (item.id == e.id);
 	});
 	selectedCart.splice(index, 1);
-	drawCart("card",selectedCart);
-	let res = await getTotalCartPrice(selectedCart, currency, rateUrl);
-	drawTotalPrice("totalSum", res, currency);
-	console.log(res);
+	drawCart(selectedCart);
+	arrayTotal = await getTotalCartPrice(selectedCart, currency);
+	console.log(arrayTotal);
+	if (Object.keys(arrayTotal).length) {
+			drawTotalPrice(arrayTotal, currency);
+	} else {
+		alert("Возникла ошибка..");
+	}
+
 }
 
-function drawValute(idValute, currency){
+function drawValute(currency){
 	Object.keys(currency.available).forEach(item => {
 		let option = document.createElement('option');
 		option.value = item;
@@ -74,63 +87,67 @@ function drawValute(idValute, currency){
 		if (item === currency.active) {
 			option.selected = true;
 		}
-		document.getElementById(idValute).append(option);
+		document.getElementById("valute").append(option);
 	});
 }
 
-function drawTotalPrice(idTotal, arrTotal, currency){
+function drawTotalPrice(arrTotal, currency){
 	let total = arrTotal[currency.active];
-	document.getElementById(idTotal).innerHTML = total.toFixed(2) ;
+	document.getElementById("totalSum").innerHTML = total.toFixed(2) ;
 }
 
-function drawCart(idElem, selectedCart) {
-	document.getElementById(idElem).innerHTML = '';
+function drawCart(iselectedCart) {
+	document.getElementById("card").innerHTML = '';
 	if (selectedCart.length){
 		selectedCart.forEach(item => {
-			let cartItem = document.createElement('div');
+			let cartItem = document.createElement("div");
 			cartItem.id = item.id;
 			cartItem.className = "cart__item item";
-			let nameItem = document.createElement('div');
+			let nameItem = document.createElement("div");
 			nameItem.innerHTML = item.name;
-			let priceItem = document.createElement('div');
+			let priceItem = document.createElement("div");
 			priceItem.innerHTML = `<strong>${item.price}</strong> ${currency.available[currency.base]}`;
-			let deleteBtn = document.createElement('button');
+			let deleteBtn = document.createElement("button");
 			deleteBtn.className = "item_delete-btn";
 			deleteBtn.innerHTML = "Удалить";
 			priceItem.append(deleteBtn);
 			deleteBtn.onclick = ()=>deleteOne(cartItem);
 			cartItem.append(nameItem, priceItem);
-			document.getElementById(idElem).append(cartItem);
+			document.getElementById("card").append(cartItem);
 		});
 		
 	} else {
-		document.getElementById(idElem).innerHTML = "<p>В корзине нет элементов</p>";
+		document.getElementById("card").innerHTML = "<p>В корзине нет элементов</p>";
 	}
 }
 
-async function getTotalCartPrice(selectedCart, currency, rateUrl){
+async function getTotalCartPrice(selectedCart, currency){
 	let sum = getTotalSum(selectedCart);
-	let rate = await getRate(rateUrl);
-	if (rate){
-		//пересчет относительно базовой валюты веб сервиса - RUB
-		let sumRub = currency.base === "RUB" ? sum : sum * rate.Valute[currency.base].Value;
-		let totalCartPrice = 
-		Object.keys(currency.available).reduce((previousValue, item) => {
-			if (item === "RUB") {
-				previousValue[item] = sumRub;
-			} else {
-				previousValue[item] = sumRub/rate.Valute[item].Value
-			}
-			return previousValue;
-		}, {});
-		return totalCartPrice;
+	if (Object.keys(rateValute).length == 0){
+		let rate = await getRate();
+		if (rate){
+			//Сохраняем курс в глобальную переменную
+			rateValute = rate.Valute;
+		}
 	}
+	//пересчет относительно базовой валюты веб сервиса - RUB
+	let sumRub = currency.base === "RUB" ? sum : sum * rateValute[currency.base].Value;
+	let totalCartPrice = 
+	Object.keys(currency.available).reduce((previousValue, item) => {
+		if (item === "RUB") {
+			previousValue[item] = sumRub;
+		} else {
+			previousValue[item] = sumRub/rateValute[item].Value
+		}
+		return previousValue;
+	}, {});
+	return totalCartPrice;
 	
 
 }
 
-async function getRate(url){
-	let response = await fetch(url);
+async function getRate(){
+	let response = await fetch(rateUrl);
 	if (response.ok) {
 	  let rate = response.json(); 
 	  return rate;
